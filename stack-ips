@@ -1,0 +1,30 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import argparse
+
+import boto
+from boto import ec2
+import argparse
+
+parser = argparse.ArgumentParser(description='Get IPs of instances created by a CloudFormation stack')
+parser.add_argument('--public', action="store_true", default=False)
+parser.add_argument('STACK_NAME', action="store")
+args = parser.parse_args()
+
+def get_region(obj):
+    for r in obj.regions():
+        if r.name == os.getenv('EC2_REGION'):
+            return r
+
+ec2conn = boto.connect_ec2(region=get_region(ec2))
+
+for res in ec2conn.get_all_instances():
+    for i in res.instances:
+        if i.tags['aws:cloudformation:stack-name'] == args.STACK_NAME:
+            if args.public:
+                print i.publicIp
+            else:
+                print i.private_ip_address
+sys.exit(0)
