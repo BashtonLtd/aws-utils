@@ -24,7 +24,10 @@ for res in ec2conn.get_all_instances():
     for i in res.instances:
         if i.tags['aws:cloudformation:stack-name'] == args.STACK_NAME:
             if args.public:
-                print i.publicIp
+                try:
+                    print i.publicIp
+                except:
+                    print i.public_dns_name
             else:
                 print i.private_ip_address
 sys.exit(0)
