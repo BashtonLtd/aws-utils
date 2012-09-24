@@ -22,12 +22,15 @@ ec2conn = boto.connect_ec2(region=get_region(ec2))
 
 for res in ec2conn.get_all_instances():
     for i in res.instances:
-        if i.tags['aws:cloudformation:stack-name'] == args.STACK_NAME:
-            if args.public:
-                try:
-                    print i.publicIp
-                except:
-                    print i.public_dns_name
-            else:
-                print i.private_ip_address
+        try:
+            if i.tags['aws:cloudformation:stack-name'] == args.STACK_NAME and i.state == 'running':
+                if args.public:
+                    try:
+                        print i.publicIp
+                    except:
+                        print i.public_dns_name
+                else:
+                    print i.private_ip_address
+        except:
+            pass
 sys.exit(0)
