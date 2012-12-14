@@ -1,36 +1,58 @@
 #!/usr/bin/env python
-
-import os
-import sys
-import argparse
-
+import os,sys
 import boto
 from boto import ec2
-import argparse
-
-parser = argparse.ArgumentParser(description='Get IPs of instances created by a CloudFormation stack')
-parser.add_argument('--public', action="store_true", default=False)
-parser.add_argument('STACK_NAME', action="store")
-args = parser.parse_args()
 
 def get_region(obj):
-    for r in obj.regions():
-        if r.name == os.getenv('EC2_REGION'):
-            return r
+  for r in obj.regions():
+    if r.name == os.getenv('EC2_REGION'):
+      return r
 
-ec2conn = boto.connect_ec2(region=get_region(ec2))
 
-for res in ec2conn.get_all_instances():
+def priv_pub(instance):
+  if options.public:
+    if instance.ip_address:
+      print(instance.ip_address)
+  else:
+    print(instance.private_ip_address)
+
+
+def main():
+  ec2conn = boto.connect_ec2(region=get_region(ec2))
+
+  for res in ec2conn.get_all_instances():
     for i in res.instances:
-        try:
-            if i.tags['aws:cloudformation:stack-name'] == args.STACK_NAME and i.state == 'running':
-                if args.public:
-                    try:
-                        print i.publicIp
-                    except:
-                        print i.public_dns_name
-                else:
-                    print i.private_ip_address
-        except:
-            pass
-sys.exit(0)
+      if options.ip_all:
+        priv_pub(i)
+      elif options.stackname:
+        if i.tags.has_key('aws:cloudformation:stack-name'):
+          if i.tags['aws:cloudformation:stack-name'] == stackname and i.state == 'running':
+            priv_pub(i)
+        else:
+          no_tag = str(i) + ' has no aws:cloudformation:stack-name tag\n'
+          sys.stderr.write(no_tag)
+
+
+if __name__ == "__main__":
+  from optparse import OptionParser as OP
+
+  usage = "usage: "+os.path.basename(sys.argv[0])+" [options]"
+  parser = OP(usage)
+  parser.add_option('-s', '--stackname', dest="stackname", action="store")
+  parser.add_option('-p', '--public', dest="public", action="store_true",
+      help='show public IPs')
+  parser.add_option('-a', '--all', dest="ip_all", action="store_true",
+      help='show all IPs for all instances')
+  (options, args) = parser.parse_args()
+
+  if len(sys.argv) < 2:
+    print(usage)
+    sys.exit(11)
+
+  if options.ip_all:
+    ips = options.ip_all
+  if options.stackname:
+    stackname = options.stackname
+
+  main()
+  sys.exit(0)
