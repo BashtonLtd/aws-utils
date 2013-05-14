@@ -6,10 +6,18 @@ from boto import ec2
 k_name='stack-ips'
 k_version='1.2.0'
 
+def check_region_var():
+  if not os.getenv('EC2_REGION'):
+    print('EC2_REGION variable is not set')
+    sys.exit(21)
+  else:
+    return os.getenv('EC2_REGION')
+
 def get_region(obj):
-  for r in obj.regions():
-    if r.name == os.getenv('EC2_REGION'):
-      return r
+  if check_region_var():
+    for r in obj.regions():
+      if r.name == check_region_var():
+        return r
 
 
 def priv_pub(instance):
