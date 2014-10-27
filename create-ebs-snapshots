@@ -1,0 +1,55 @@
+#!/usr/bin/env python
+# To run this script IAM role is required with the following permissions:
+#    "ec2:CreateSnapshot",
+#    "ec2:DescribeRegions",
+#    "ec2:DescribeVolumeAttribute",
+#    "ec2:DescribeVolumeStatus",
+#    "ec2:DescribeVolumes"
+
+import os
+import boto
+from boto import ec2
+
+# ### Debugging on for boto
+# import logging
+# logging.basicConfig(filename="boto.log", level=logging.DEBUG)
+
+
+def get_region(obj):
+    """ Grab AWS region in which this script is going to operate """
+    if os.getenv('EC2_REGION'):
+        region = os.getenv('EC2_REGION')
+    else:
+        region = 'eu-west-1'
+
+    for r in obj.regions():
+        if r.name == region:
+            return r
+
+
+def get_volume_data(conn):
+    """ Takes as an argument connection object and returns dict of key value
+        pairs of type:
+        volumeid: 'aws:cloudformation:stack-name'
+    """
+    snap_data = {}
+    volumes = conn.get_all_volumes(volume_ids=None, filters=None)
+    for volume in volumes:
+        tags = dict(volume.tags)
+        for tag in tags.items():
+            if tag[0] == 'aws:cloudformation:stack-name':
+                snap_data[volume.id] = tag[1]
+    return snap_data
+
+
+def main():
+    ec2conn = boto.connect_ec2(region=get_region(ec2))
+
+    volumes_data = get_volume_data(ec2conn)
+
+    for vol_id, vol_tag in volumes_data.items():
+        ec2conn.create_snapshot(vol_id, vol_tag)
+
+if __name__ == "__main__":
+
+    main()
