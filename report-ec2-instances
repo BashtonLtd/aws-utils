@@ -1,0 +1,55 @@
+#!/usr/bin/env python
+# To run this script IAM role is required with the following permissions:
+
+import os
+import sys
+import boto
+from boto import ec2
+
+# ### Debugging on for boto
+# import logging
+# logging.basicConfig(filename="boto.log", level=logging.DEBUG)
+
+
+def get_region(obj):
+    """ Grab AWS region in which this script is going to operate """
+    if os.getenv('EC2_REGION'):
+        region = os.getenv('EC2_REGION')
+    else:
+        region = 'eu-west-1'
+
+    for r in obj.regions():
+        if r.name == region:
+            return r
+
+
+def get_instance_count(conn, service_tag=False):
+    """ Returning count of the tags == Service for given service tag or all of
+        them if service_tag not given, it's done for all of the instances within
+        VPC
+    """
+    instances = []
+    for res in conn.get_all_instances():
+        if service_tag:
+            for i in res.instances:
+                if i.tags['Service'] == service_tag:
+                    instances.append(i.tags['Service'])
+        else:
+            for i in res.instances:
+                instances.append(i.tags['Service'])
+
+    return len(instances)
+
+def main():
+    ec2conn = boto.connect_ec2(region=get_region(ec2))
+
+    if len(sys.argv) != 2 :
+        service = False
+    else:
+        service = sys.argv[1]
+
+    print(get_instance_count(ec2conn, service))
+
+if __name__ == "__main__":
+
+    main()
